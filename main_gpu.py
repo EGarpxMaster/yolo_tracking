@@ -20,11 +20,34 @@ import glob
 
 from ultralytics import YOLO
 from coco_classes import filter_classes_by_category, get_class_name
+import torch
 
 # Clean previous output files
-files = glob.glob('output/ouit_1/*.png')
+files = glob.glob('output/*.png')
 for f in files:
    os.remove(f)
+
+# GPU Configuration
+def detect_device(force_cpu=False):
+    """Detect and configure the best available device (GPU or CPU)"""
+    if force_cpu:
+        print("[INFO] Forzando uso de CPU (--cpu flag)")
+        return 'cpu'
+    
+    if torch.cuda.is_available():
+        device = 'cuda'
+        gpu_name = torch.cuda.get_device_name(0)
+        gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)  # GB
+        print(f"[INFO] 🚀 GPU detectada: {gpu_name}")
+        print(f"[INFO] 💾 Memoria GPU: {gpu_memory:.2f} GB")
+        print(f"[INFO] ⚡ CUDA Version: {torch.version.cuda}")
+        print(f"[INFO] ✓ Usando GPU para aceleración máxima")
+        return device
+    else:
+        print("[INFO] GPU no disponible, usando CPU")
+        print("[WARN] El procesamiento será más lento. Considera instalar PyTorch con CUDA:")
+        print("[WARN] pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121")
+        return 'cpu'
 
 # Global variables for line drawing interface
 drawing_lines = []  # List of completed lines, each line is [(x1,y1), (x2,y2)]
@@ -189,6 +212,7 @@ ap.add_argument("-c", "--confidence", type=float, default=0.5, help="minimum pro
 ap.add_argument("-t", "--threshold", type=float, default=0.3, help="threshold when applying non-maxima suppression")
 ap.add_argument("--classes", type=str, default="vehicles", help="classes to detect: 'vehicles', 'people', 'people_and_vehicles', 'transportation', 'traffic', 'all'")
 ap.add_argument("--show-labels", action="store_true", help="show 'ID:X class_name' format instead of 'X class_name'")
+ap.add_argument("--cpu", action="store_true", help="force CPU usage even if GPU is available (for testing)")
 args = vars(ap.parse_args())
 
 # Return true if line segments AB and CD intersect
@@ -198,9 +222,21 @@ def intersect(A,B,C,D):
 def ccw(A,B,C):
 	return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
 
+# Detect and configure device (GPU or CPU)
+DEVICE = detect_device(force_cpu=args.get("cpu", False))
+
 # Load YOLOv11x model with BoTSORT tracking
-print("[INFO] loading YOLOv11n with BoTSORT from Ultralytics...")
+print("[INFO] loading YOLOv11x with BoTSORT from Ultralytics...")
 model = YOLO('yolo11x.pt')  # This will automatically download the model if not present
+
+# Move model to GPU if available
+model.to(DEVICE)
+print(f"[INFO] ✓ Modelo cargado en: {DEVICE.upper()}")
+
+# Enable optimizations for GPU
+if DEVICE == 'cuda':
+    print("[INFO] ⚡ Habilitando optimizaciones de GPU (FP16/half precision)")
+    torch.backends.cudnn.benchmark = True  # Optimize for fixed input sizes
 
 # Get selected classes for detection
 selected_classes = filter_classes_by_category(args["classes"])
@@ -257,6 +293,11 @@ for i in range(len(counting_lines)):
 	line_counts[i] = {}
 	counted_ids_per_line[i] = set()
 
+# Performance tracking
+total_processing_time = 0
+frame_times = []
+processing_start_time = time.time()
+
 # loop over frames from the video file stream
 while True:
 	# read the next frame from the file
@@ -270,12 +311,17 @@ while True:
 	if W is None or H is None:
 		(H, W) = frame.shape[:2]
 
-	# Run YOLOv11x inference with BoTSORT tracking
+	# Run YOLOv11x inference with BoTSORT tracking on GPU
 	start = time.time()
 	results = model.track(frame, conf=args["confidence"], iou=args["threshold"], 
 	                     tracker="botsort.yaml", verbose=False, classes=selected_classes,
-	                     persist=True)
+	                     persist=True, device=DEVICE, half=(DEVICE == 'cuda'))
 	end = time.time()
+	
+	# Track performance
+	frame_time = end - start
+	frame_times.append(frame_time)
+	total_processing_time += frame_time
 
 	# Process tracking results
 	boxes = []
@@ -426,11 +472,38 @@ if writer is not None:
 	writer.release()
 vs.release()
 
+# Calculate performance metrics
+total_elapsed_time = time.time() - processing_start_time
+avg_frame_time = np.mean(frame_times) if frame_times else 0
+avg_fps = 1.0 / avg_frame_time if avg_frame_time > 0 else 0
+min_frame_time = np.min(frame_times) if frame_times else 0
+max_frame_time = np.max(frame_times) if frame_times else 0
+
 # Print and save counts
 print("\n" + "="*60)
 print("RESULTADOS DEL CONTEO")
 print("="*60)
 print(f"\nTotal general: {counter}")
+
+# Performance report
+print("\n" + "="*60)
+print("RENDIMIENTO DEL SISTEMA")
+print("="*60)
+print(f"Dispositivo utilizado: {DEVICE.upper()}")
+print(f"Frames procesados: {frameIndex}")
+print(f"Tiempo total: {total_elapsed_time:.2f} segundos ({total_elapsed_time/60:.2f} minutos)")
+print(f"FPS promedio: {avg_fps:.2f}")
+print(f"Tiempo por frame:")
+print(f"  - Promedio: {avg_frame_time*1000:.2f} ms")
+print(f"  - Mínimo: {min_frame_time*1000:.2f} ms")
+print(f"  - Máximo: {max_frame_time*1000:.2f} ms")
+
+if DEVICE == 'cuda':
+	gpu_util = torch.cuda.memory_allocated() / torch.cuda.max_memory_allocated() * 100 if torch.cuda.max_memory_allocated() > 0 else 0
+	print(f"\nUso de GPU:")
+	print(f"  - Memoria asignada: {torch.cuda.memory_allocated()/1024**3:.2f} GB")
+	print(f"  - Memoria máxima usada: {torch.cuda.max_memory_allocated()/1024**3:.2f} GB")
+	print(f"  - Eficiencia: {gpu_util:.1f}%")
 
 print("\nTotales por clase:")
 for cls_name, cnt in class_counts.items():

@@ -7,10 +7,10 @@ import os
 import glob
 from coco_classes import filter_classes_by_category, get_class_name
 
-# Clean previous output files
-files = glob.glob('output/*.png')
-for f in files:
-   os.remove(f)
+# Eliminamos la limpieza de archivos PNG ya que no los vamos a generar
+# files = glob.glob('output/*.png')
+# for f in files:
+#    os.remove(f)
 
 # Global variables for line drawing interface
 drawing_lines = []  # List of completed lines, each line is [(x1,y1), (x2,y2)]
@@ -163,6 +163,7 @@ ap.add_argument("-o", "--output", required=True, help="path to output video")
 ap.add_argument("-c", "--confidence", type=float, default=0.5, help="minimum probability to filter weak detections")
 ap.add_argument("--classes", type=str, default="vehicles", help="classes to detect: 'vehicles', 'people', 'people_and_vehicles', 'transportation', 'traffic', 'all'")
 ap.add_argument("--cpu", action="store_true", help="force CPU usage even if GPU available")
+ap.add_argument("--no-display", action="store_true", help="run without display (for headless systems)")
 args = vars(ap.parse_args())
 
 # Configuración inicial
@@ -341,8 +342,18 @@ while True:
             start_y += 15
         start_y += 8
 
-    # Save frame and write to output video
-    #cv2.imwrite("output/frame-{}.png".format(frameIndex), frame)
+    # ELIMINADO: Guardar cada frame como imagen
+    # cv2.imwrite("output/frame-{}.png".format(frameIndex), frame)
+    
+    # Solo mostrar el frame si no estamos en modo sin display
+    if not args["no_display"]:
+        cv2.imshow("Video Processing", frame)
+        # Salir si se presiona 'q'
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            print("[INFO] Procesamiento interrumpido por el usuario")
+            break
+
+    # Escribir frame al video de salida
     writer.write(frame)
 
     # Increase frame index
@@ -362,6 +373,10 @@ fps = frameIndex / total_time if total_time > 0 else 0
 cap.release()
 if writer is not None:
     writer.release()
+
+# Cerrar ventanas de visualización
+if not args["no_display"]:
+    cv2.destroyAllWindows()
 
 # Print final results
 print("\n" + "="*60)
@@ -399,5 +414,3 @@ try:
     print("="*60 + "\n")
 except Exception as e:
     print(f"[WARN] No se pudieron guardar los conteos: {e}")
-
-cv2.destroyAllWindows()
