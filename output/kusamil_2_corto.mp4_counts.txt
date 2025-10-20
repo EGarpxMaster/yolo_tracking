@@ -1,0 +1,16 @@
+TOTAL_GENERAL:8
+
+TOTALES_POR_CLASE:
+car:5
+bus:2
+person:1
+
+TOTALES_POR_LINEA:
+
+Linea_1_total:3
+Linea_1_car:1
+Linea_1_bus:2
+
+Linea_2_total:5
+Linea_2_car:4
+Linea_2_person:1

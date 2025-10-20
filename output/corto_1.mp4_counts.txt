@@ -1,0 +1,9 @@
+TOTAL_GENERAL:0
+
+TOTALES_POR_CLASE:
+
+TOTALES_POR_LINEA:
+
+Linea_1_total:0
+
+Linea_2_total:0

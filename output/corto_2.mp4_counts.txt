@@ -1,0 +1,15 @@
+TOTAL_GENERAL:4
+
+TOTALES_POR_CLASE:
+truck:2
+car:2
+
+TOTALES_POR_LINEA:
+
+Linea_1_total:2
+Linea_1_truck:1
+Linea_1_car:1
+
+Linea_2_total:2
+Linea_2_truck:1
+Linea_2_car:1

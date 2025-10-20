@@ -1,0 +1,16 @@
+TOTAL_GENERAL:6
+
+TOTALES_POR_CLASE:
+car:3
+person:2
+truck:1
+
+TOTALES_POR_LINEA:
+
+Linea_1_total:3
+Linea_1_car:1
+Linea_1_person:2
+
+Linea_2_total:3
+Linea_2_car:2
+Linea_2_truck:1

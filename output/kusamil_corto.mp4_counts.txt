@@ -1,0 +1,11 @@
+TOTAL_GENERAL:1
+
+TOTALES_POR_CLASE:
+car:1
+
+TOTALES_POR_LINEA:
+
+Linea_1_total:1
+Linea_1_car:1
+
+Linea_2_total:0
