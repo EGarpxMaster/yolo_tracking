@@ -493,7 +493,6 @@ class TrafficCounterGUI:
             "• Detección multi-objeto con YOLOv11x\n"
             "• Rastreo avanzado con BoTSORT\n"
             "• Conteo por líneas personalizables\n"
-            "• Reportes detallados en HTML"
         )
         
         message_label = ctk.CTkLabel(
