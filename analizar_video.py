@@ -10,7 +10,12 @@ from ultralytics import YOLO
 from coco_classes import filter_classes_by_category, get_class_name
 import torch
 
-salida_path = "/home/barba_negra/yolo_tracking/output/"
+# Obtener directorio actual y configurar rutas relativas
+current_dir = os.path.dirname(os.path.abspath(__file__))
+salida_path = os.path.join(current_dir, "output", "")  # Usar ruta relativa con barra final
+# Crear directorio de salida si no existe
+os.makedirs(salida_path, exist_ok=True)
+
 confidence = 0.2
 threshold = 0.3
 classes = 'people_and_vehicles'

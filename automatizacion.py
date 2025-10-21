@@ -2,15 +2,22 @@ import os
 import time 
 import cv2
 
-# Path donde se encuentran los videos de muestra a analizar
-#videos_path = "/home/barba_negra/yolo_tracking/test_videos/" 
-# Path donde se encuentran los videos de entrada
-videos_path = "/home/barba_negra/yolo_tracking/input/" 
+# Obtener el directorio actual del script
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Path donde se encuentran los videos de entrada (relativo al directorio del script)
+videos_path = os.path.join(current_dir, "input")
 
 def listar_videos():
     """
     Lista todos los archivos de video en el directorio de entrada
     """
+    if not os.path.exists(videos_path):
+        print(f"[ERROR] El directorio de entrada no existe: {videos_path}")
+        print(f"[INFO] Creando directorio: {videos_path}")
+        os.makedirs(videos_path, exist_ok=True)
+        return []
+    
     archivos_video = [f for f in os.listdir(videos_path) if f.lower().endswith(('.mp4', '.avi', '.mov'))]
     print(f"Videos disponibles para análisis: {archivos_video}")
     
